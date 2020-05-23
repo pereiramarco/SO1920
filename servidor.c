@@ -9,6 +9,7 @@
 #define split " "
 
 int tempo_inatividade,tempo_execucao;
+int pid[MAX][2];
 
 void doStuff(char * linha) {
     char * token;
@@ -37,16 +38,15 @@ void doStuff(char * linha) {
         else r=1;
     }
     else if (!strcmp(splitedinput[0],"executar") || !strcmp(splitedinput[0],"-e")) {
-        puts("execucao");
+        write(1,"Escolheu executar uma tarefa\n",29);
         int c=0,p[2];
         if (tam>1) {
             for (i=0;splitedinput[1][i];i++) {
                 splitedinput[1][i]=splitedinput[1][i+1];
             }
             for (i=0;splitedinput[tam-1][i+1];i++);
-                splitedinput[tam-1][i]='\0';
+            splitedinput[tam-1][i]='\0';
             for (i=1;i<tam;i++,c++) {
-                puts("vou separar");
                 for (j=0;i<tam && strcmp(splitedinput[i],"|");i++,j++) {
                     comando[c][j]=splitedinput[i];
                 }
