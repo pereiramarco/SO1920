@@ -3,13 +3,19 @@
 ###################Makefile#####################
 
 
-all: servidor
+all: servidor cliente
 
 run: servidor
-	./servidor.o
+	./servidor
+
+argus: cliente
+	./argus
 
 servidor: servidor.c 
-	gcc -o servidor.o servidor.c
+	gcc -o servidor servidor.c
+
+cliente: cliente.c
+	gcc -o argus cliente.c
 
 clean:
 	rm -rf *.o fifo index log argus servidor
