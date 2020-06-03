@@ -14,8 +14,9 @@
 /*dúvidas
 */
 
-//pid[MAX][MAX] matriz que contem no indice 0 o pid do pai, no indice 1 o numero da tarefa no restante o pid do filho vivo
-int tempo_inatividade,tempo_execucao,pid[MAX][3],ntarefa;
+//pid[MAX][3] matriz que contem no indice 0 o pid do pai, no indice 1 o numero da tarefa no restante o pid do filho vivo
+int tempo_inatividade,tempo_execucao,pid[MAX][3],ntarefa,acabadas;
+char history[MAX][MAX],comand[MAX][MAX];
 
 int getPIDOfTask(int task) {
     for (int i=0;i<MAX;i++) {
@@ -40,8 +41,22 @@ void addProcess(int p,int pai) {
 }
 
 void chld_died_handler() {
-    int pai =wait(NULL);
+    int e,pai = wait(&e);
     int paiID=getIndexOfPID(pai);
+    if (WIFEXITED(e)) e=WEXITSTATUS(e);
+    switch (e) {
+        case (0) :
+            sprintf(history[acabadas++],"#%d, concluida: %s\n",pid[paiID][1],comand[pid[paiID][1]]);
+            break;
+        case (9):
+            sprintf(history[acabadas++],"#%d, terminada: %s\n",pid[paiID][1],comand[pid[paiID][1]]);
+            break;
+        case (15):
+            sprintf(history[acabadas++],"#%d, max execução: %s\n",pid[paiID][1],comand[pid[paiID][1]]);
+            break;
+        default:
+        break;
+    }
     pid[paiID][0]=0;
     pid[paiID][1]=0;
     pid[paiID][2]=0;
@@ -51,13 +66,18 @@ void terminate(int s) {
     int k=getpid();
     int p=getIndexOfPID(k);
     int i;
+    int sig;
+    if (s==SIGUSR1) 
+        sig=SIGKILL;
+    else 
+        sig=SIGTERM;
     if (p!=-1) {
         //TO-DO save result
         if (pid[p][2]) {
             kill(pid[p][2],SIGKILL);
             wait(NULL);
         }
-        kill(pid[p][0],SIGKILL);
+        kill(pid[p][0],sig);
     }
 }
 
@@ -107,6 +127,7 @@ void doStuff(char * linha) {
         int c=0,p[2],k,n;
         if (tam>1) {
             signal(SIGALRM,terminate);
+            signal(SIGUSR1,terminate);
             for (i=0;splitedinput[1][i];i++) {
                 splitedinput[1][i]=splitedinput[1][i+1];
             }
@@ -162,6 +183,7 @@ void doStuff(char * linha) {
                 exit(0);
             }
             i=addToPIDList(k);
+            strcpy(comand[i],splitedinput[1]);
             printf("iniciou em pid %d a tarefa %d\n",k,i);
         }
         else r=1;
@@ -181,12 +203,15 @@ void doStuff(char * linha) {
         puts("termina");
         if (tam>1) {
             int p=getPIDOfTask(atoi(splitedinput[1]));
-            kill(p,SIGALRM);
+            kill(p,SIGUSR1);
         }
         else r=1;
     }
     else if (!strcmp(splitedinput[0],"historico") || !strcmp(splitedinput[0],"-r")) {
         puts("historico");
+        for (i=0;i<acabadas;i++) {
+            write(1,history[i],strlen(history[i]));
+        }
     }
     else if (!strcmp(splitedinput[0],"ajuda") || !strcmp(splitedinput[0],"-h")) {
         puts("ajuda");
@@ -213,6 +238,7 @@ void main() {
         pid[n][1]=0;
         pid[n][2]=0;
     }
+    acabadas=0;
     mkfifo("fifo",0666);
     index = open("index",O_RDWR | O_APPEND | O_CREAT, 0666);
     log = open("log",O_RDWR | O_APPEND | O_CREAT, 0666);
