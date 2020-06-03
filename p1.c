@@ -1,5 +1,5 @@
 
 void main() {
-    getchar();
+    sleep(10000);
     puts("ola");
 }
