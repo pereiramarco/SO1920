@@ -15,7 +15,7 @@
 */
 
 //pid[MAX][3] matriz que contem no indice 0 o pid do pai, no indice 1 o numero da tarefa no restante o pid do filho vivo
-int tempo_inatividade,tempo_execucao,pid[MAX][3],ntarefa,acabadas;
+int tempo_inatividade,tempo_execucao,pid[MAX][3],ntarefa,acabadas,indextoSave,logtoSave;
 char history[MAX][MAX],comand[MAX][MAX];
 
 int getPIDOfTask(int task) {
@@ -95,6 +95,20 @@ int addToPIDList(int pidd) {
     return r;
 }
 
+void saveToLogs(int *p,int t) {
+    char string[MAX],indexC[MAX];
+    int n,startsAt,total=0;
+    close(p[1]);
+    indexC[0]='\0';
+    startsAt=lseek(logtoSave, 0, SEEK_END);
+    while((n=read(p[0],string,MAX))) {
+        total+=n;
+        write(logtoSave,string,n);
+    }
+    sprintf(indexC,"%d %d %d\n",t,startsAt,startsAt+total);
+    write(indextoSave,indexC,strlen(indexC));
+}
+
 void doStuff(char * linha) {
     char * token;
     char * splitedinput[MAX];
@@ -147,7 +161,7 @@ void doStuff(char * linha) {
                 pipe(p);
                 if (!(i=fork())) {
                     close(p[0]);
-                    if (c-1>0) dup2(p[1],1);
+                    dup2(p[1],1);
                     close(p[1]);
                     execvp(comando[0][0],comando[0]);
                     puts("exit");
@@ -155,7 +169,7 @@ void doStuff(char * linha) {
                 }
                 pid[getIndexOfPID(getpid())][2]=i;
                 waitpid(i,NULL,0);
-                for (i=1;i<c-1;i++) {
+                for (i=1;i<c;i++) {
                     dup2(p[0],0);
                     close(p[1]);
                     close(p[0]);
@@ -171,14 +185,7 @@ void doStuff(char * linha) {
                     pid[getIndexOfPID(getpid())][2]=k;
                     waitpid(k,NULL,0);
                 }
-                if (c-1>0) {
-                    dup2(p[0],0);
-                    close(p[1]);
-                    close(p[0]);
-                    execvp(comando[c-1][0],comando[c-1]);
-                    puts("error");
-                    exit(0);
-                }
+                saveToLogs(p,pid[getIndexOfPID(getpid())][1]);
                 exit(0);
             }
             i=addToPIDList(k);
@@ -218,20 +225,58 @@ void doStuff(char * linha) {
     }
     else if (!strcmp(splitedinput[0],"ajuda") || !strcmp(splitedinput[0],"-h")) {
         puts("ajuda");
-        printf("Executar task: -e ou executar\nMudar tempo inatividade: -i ou tempo-inatividade\nMudar tempo execução: -m ou tempo-execucao\nListar tarefas: -l ou listar\nTerminar tarefa: -t ou terminar\n");
+        printf("Executar task: -e ou executar 'comando1 | comando2 | ...'\nMudar tempo inatividade: -i ou tempo-inatividade n(segundos)\nMudar tempo execução: -m ou tempo-execucao n(segundos)\nListar tarefas: -l ou listar\nTerminar tarefa: -t ou terminar n(numero da tarefa)\nVer histórico: -r ou historico\n");
     }
     else if (!strcmp(splitedinput[0],"output") || !strcmp(splitedinput[0],"-o")) {
         puts("consultar output");
+        char chari;
+        char linha[MAX];
+        char *character;
+        int task=0,beg=0,end=0,n,maxend;
+        if (tam>1) {
+            int i = atoi(splitedinput[1]),k=MAX;
+            maxend=lseek(indextoSave,0,SEEK_END);
+            lseek(indextoSave,0,SEEK_SET);
+            while (1) { 
+                linha[0]='\0';
+                while ((n=read(indextoSave,&chari,1))) {
+                    if (chari!='\n') {
+                        strcat(linha,&chari);
+                    }
+                    else 
+                        break;
+                }
+                for (int j=0;linha[j];j++) {
+                    if ((linha[j]>57 || linha[j]<48) && linha[j]!=' ') {
+                        for (int k=j;linha[k];k++)
+                            linha[k]=linha[k+1];
+                    }
+                }
+                task = strtol (linha,&character,10);
+                beg = strtol (character,&character,10);
+                end = strtol (character,NULL,10);
+                if (task==i || lseek(indextoSave,0,SEEK_CUR)==maxend)
+                    break;
+            }
+            if (task!=i) {
+                puts("non existent");
+                return;
+            }
+            lseek(logtoSave,beg,SEEK_SET);
+            while ((n=read(logtoSave,linha,1)) && end!=lseek(logtoSave,0,SEEK_CUR)) {
+                write(1,linha,n);
+            }
+        }
+        else r=1;
     }
     else r=1;
     if (r) {
         printf("INVALID INPUT\n");
     }
-
 }
 
 void main() {
-    int n,index,log,fifo;
+    int n,fifo;
     char linha[256];
     ntarefa=1;
     tempo_inatividade=-1;
@@ -244,8 +289,8 @@ void main() {
     }
     acabadas=0;
     mkfifo("fifo",0666);
-    index = open("index",O_RDWR | O_APPEND | O_CREAT, 0666);
-    log = open("log",O_RDWR | O_APPEND | O_CREAT, 0666);
+    indextoSave = open("index",O_RDWR | O_APPEND | O_CREAT, 0666);
+    logtoSave = open("log",O_RDWR | O_APPEND | O_CREAT, 0666);
     signal(SIGCHLD,chld_died_handler);
     while (1) {
         fifo = open("fifo",O_RDONLY);
