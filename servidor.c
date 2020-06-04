@@ -128,9 +128,8 @@ void doStuff(char * linha) {
         if (tam>1) {
             signal(SIGALRM,terminate);
             signal(SIGUSR1,terminate);
-            for (i=0;splitedinput[1][i];i++) {
+            for (i=0;splitedinput[1][i];i++)
                 splitedinput[1][i]=splitedinput[1][i+1];
-            }
             for (i=0;splitedinput[tam-1][i+1];i++);
             splitedinput[tam-1][i]='\0';
             for (i=1;i<tam;i++,c++) {
@@ -183,19 +182,23 @@ void doStuff(char * linha) {
                 exit(0);
             }
             i=addToPIDList(k);
-            strcpy(comand[i],splitedinput[1]);
-            printf("iniciou em pid %d a tarefa %d\n",k,i);
+            for (int j=1;j<=tam-1;j++) {
+                strcat(comand[i],splitedinput[j]);
+                strcat(comand[i]," ");
+            }
+            printf("iniciou em pid %d a tarefa %d de comando %s\n",k,i,comand[i]);
         }
         else r=1;
     }
     else if (!strcmp(splitedinput[0],"listar") || !strcmp(splitedinput[0],"-l")) {
         puts("listar");
         write(1,"######TASKS######\n",18);
+        char c[MAX];
         for (i=0;i<MAX;i++) {
             if (pid[i][0]) {
-                //write(1,"Tarefa ",7); //how to put integer in string (can use sprintf??)
-                //write(1," em execução!\n",14);
-                printf("Tarefa %d em execução!\n",pid[i][1]);
+                c[0]='\0';
+                sprintf(c,"Tarefa %d em execução!\n",pid[i][1]);
+                write(1,c,strlen(c));
             }
         }
     }
@@ -237,6 +240,7 @@ void main() {
         pid[n][0]=0;
         pid[n][1]=0;
         pid[n][2]=0;
+        comand[n][0]='\0';
     }
     acabadas=0;
     mkfifo("fifo",0666);
