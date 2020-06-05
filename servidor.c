@@ -12,12 +12,22 @@
 
 
 /*dúvidas
+--> saving history in file?
+--> inatividade tips? can i use the result of alarm to know when to reactivate etc etc?
+--> tarefa terminada e timedOut devo guardar no logs o q? o output antes de morrer ou algo como o historico?
+--> saving to file inside child can lead to bad things right? how to save de pipe which the child wrote to?
+--> 
 */
 
 //pid[MAX][3] matriz que contem no indice 0 o pid do pai, no indice 1 o numero da tarefa no restante o pid do filho vivo
 int tempo_inatividade,tempo_execucao,pid[MAX][3],ntarefa,acabadas,indextoSave,logtoSave;
 char history[MAX][MAX],comand[MAX][MAX];
 
+/**
+ * Função que retorna o pid de uma tarefa
+ * @param task tarefa dada
+ * @return pid da tarefa task
+ */ 
 int getPIDOfTask(int task) {
     for (int i=0;i<MAX;i++) {
         if (pid[i][1]==task) {
@@ -27,6 +37,11 @@ int getPIDOfTask(int task) {
     }
 }
 
+/**
+ * Função que retorna o indice de um pid
+ * @param pidd pid dado
+ * @return indice do tarefa com pid pidd na matriz global pid
+ */ 
 int getIndexOfPID(int pidd) {
     for (int i=0;i<MAX;i++) {
         if (pid[i][0]==pidd)
@@ -35,33 +50,66 @@ int getIndexOfPID(int pidd) {
     return -1;
 }
 
+/**
+ * Função que adiciona um processo de pid p à tarefa de pid pai
+ * @param p pid do filho
+ * @param pai pid da tarefa pai
+ */ 
 void addProcess(int p,int pai) {
     int i=getIndexOfPID(pai);
     pid[i][2]=p;
 }
 
+/**
+ * Salvaguarda a data de uma função para o logs e index
+ * @param p pipe descriptor 
+ * @param t task of the pipe
+ */
+void saveToLogs(int * p,int t) {
+    char string[MAX],indexC[MAX];
+    int n,startsAt,total=0;
+    indexC[0]='\0';
+    startsAt=lseek(logtoSave, 0, SEEK_END);
+    while((n=read(p[0],string,MAX))) {
+        total+=n;
+        write(logtoSave,string,n);
+    }
+    sprintf(indexC,"%d %d %d\n",t,startsAt,startsAt+total);
+    write(indextoSave,indexC,strlen(indexC));
+}
+
+
+/**
+ * Função que é ativada quando uma tarefa morre, desta forma pode guardar no histórico a forma como morreu e salvar no ficheiro log e index os dados da mesma
+ */
 void chld_died_handler() {
     int e,pai = wait(&e);
     int paiID=getIndexOfPID(pai);
+    int task=pid[paiID][1];
     if (WIFEXITED(e)) e=WEXITSTATUS(e);
     switch (e) {
-        case (0) :
-            sprintf(history[acabadas++],"#%d, concluida: %s\n",pid[paiID][1],comand[pid[paiID][1]]);
-            break;
+        case(0):
+            sprintf(history[acabadas++],"#%d, concluida: %s\n",task,comand[task]);
+        break;
         case (9):
-            sprintf(history[acabadas++],"#%d, terminada: %s\n",pid[paiID][1],comand[pid[paiID][1]]);
-            break;
+            sprintf(history[acabadas++],"#%d, terminada: %s\n",task,comand[task]);
+        break;
         case (15):
-            sprintf(history[acabadas++],"#%d, max execução: %s\n",pid[paiID][1],comand[pid[paiID][1]]);
-            break;
+            sprintf(history[acabadas++],"#%d, max execução: %s\n",task,comand[task]);
+        break;
         default:
         break;
+        
     }
     pid[paiID][0]=0;
     pid[paiID][1]=0;
     pid[paiID][2]=0;
 }
 
+/**
+ * Função que termina tarefa com um código diferente para poder depois reconhecer a forma como morreu
+ * @param s sinal que ativou esta função
+ */
 void terminate(int s) {
     int k=getpid();
     int p=getIndexOfPID(k);
@@ -72,7 +120,6 @@ void terminate(int s) {
     else 
         sig=SIGTERM;
     if (p!=-1) {
-        //TO-DO save result
         if (pid[p][2]) {
             kill(pid[p][2],SIGKILL);
             wait(NULL);
@@ -80,7 +127,11 @@ void terminate(int s) {
         kill(pid[p][0],sig);
     }
 }
-
+/**
+ * Função que atualiza a matriz pid com um processo
+ * @param pidd pid da tarefa a adicionar à matriz pid
+ * @return numero de tarefa associada ao processo adicionado
+ */
 int addToPIDList(int pidd) {
     int i,r=-1;
     for (i=0;i<MAX;i++) {
@@ -95,20 +146,10 @@ int addToPIDList(int pidd) {
     return r;
 }
 
-void saveToLogs(int *p,int t) {
-    char string[MAX],indexC[MAX];
-    int n,startsAt,total=0;
-    close(p[1]);
-    indexC[0]='\0';
-    startsAt=lseek(logtoSave, 0, SEEK_END);
-    while((n=read(p[0],string,MAX))) {
-        total+=n;
-        write(logtoSave,string,n);
-    }
-    sprintf(indexC,"%d %d %d\n",t,startsAt,startsAt+total);
-    write(indextoSave,indexC,strlen(indexC));
-}
-
+/**
+ * Função que trata do parsing e de escolher o que irá fazer consoante o que receba
+ * @param linha string onde está guardado o input do user
+ */
 void doStuff(char * linha) {
     char * token;
     char * splitedinput[MAX];
@@ -185,6 +226,7 @@ void doStuff(char * linha) {
                     pid[getIndexOfPID(getpid())][2]=k;
                     waitpid(k,NULL,0);
                 }
+                close(p[1]);
                 saveToLogs(p,pid[getIndexOfPID(getpid())][1]);
                 exit(0);
             }
