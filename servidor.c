@@ -13,9 +13,7 @@
 
 /*dúvidas
 --> saving history in file?
---> inatividade tips? can i use the result of alarm to know when to reactivate etc etc?
---> tarefa terminada e timedOut devo guardar no logs o q? o output antes de morrer ou algo como o historico?
---> saving to file inside child can lead to bad things right? how to save de pipe which the child wrote to?
+--> inatividade tips? espreitar pipe processoa meio
 --> 
 */
 
@@ -65,17 +63,18 @@ void addProcess(int p,int pai) {
  * @param p pipe descriptor 
  * @param t task of the pipe
  */
-void saveToLogs(int * p,int t) {
+void saveToLogs(int * p,int t,int died) {
     char string[MAX],indexC[MAX];
-    int n,startsAt,total=0;
+    int n,startsAt,total=0,fileTemp;
     indexC[0]='\0';
-    startsAt=lseek(logtoSave, 0, SEEK_END);
+    close(p[1]);
+    sprintf(indexC,"%d",getPIDOfTask(t));
+    sprintf(string,"%d\n",died);
+    fileTemp=open(indexC,O_WRONLY | O_CREAT,0666);
+    write(fileTemp,string,2);
     while((n=read(p[0],string,MAX))) {
-        total+=n;
-        write(logtoSave,string,n);
+        write(fileTemp,string,n);
     }
-    sprintf(indexC,"%d %d %d\n",t,startsAt,startsAt+total);
-    write(indextoSave,indexC,strlen(indexC));
 }
 
 
@@ -83,21 +82,39 @@ void saveToLogs(int * p,int t) {
  * Função que é ativada quando uma tarefa morre, desta forma pode guardar no histórico a forma como morreu e salvar no ficheiro log e index os dados da mesma
  */
 void chld_died_handler() {
-    int e,pai = wait(&e);
-    int paiID=getIndexOfPID(pai);
-    int task=pid[paiID][1];
+    int e,pai = wait(&e),n,beg=0;
+    int paiID=getIndexOfPID(pai),task=pid[paiID][1];
+    char c[MAX],fileToRem[MAX];
+    c[0]='\0';
+    fileToRem[0]='\0';
     if (WIFEXITED(e)) e=WEXITSTATUS(e);
+    sprintf(fileToRem,"%d",pai);
+    int tempFile=open(fileToRem,O_RDONLY);
+    if (tempFile!=-1) {
+        read(tempFile,c,2);
+        e=atoi(c);
+        beg=lseek(logtoSave,0,SEEK_END);
+        while((n=read(tempFile,c,MAX))) {
+            write(logtoSave,c,n);
+        }
+        c[0]='\0';
+        sprintf(c,"%d %d %d\n",pid[paiID][1],beg,lseek(logtoSave,0,SEEK_END));
+        write(indextoSave,c,strlen(c));
+    }
+    close(tempFile);
+    remove(fileToRem);
     switch (e) {
         case(0):
             sprintf(history[acabadas++],"#%d, concluida: %s\n",task,comand[task]);
         break;
-        case (9):
+        case (1):
             sprintf(history[acabadas++],"#%d, terminada: %s\n",task,comand[task]);
         break;
-        case (15):
+        case (2):
             sprintf(history[acabadas++],"#%d, max execução: %s\n",task,comand[task]);
         break;
         default:
+            sprintf(history[acabadas++],"#%d, max inatividade: %s\n",task,comand[task]);
         break;
         
     }
@@ -113,18 +130,28 @@ void chld_died_handler() {
 void terminate(int s) {
     int k=getpid();
     int p=getIndexOfPID(k);
-    int i;
-    int sig;
-    if (s==SIGUSR1) 
-        sig=SIGKILL;
-    else 
-        sig=SIGTERM;
+    int i,died,send[2];
+    switch (s) {
+    case (SIGUSR1): 
+        died=1;
+    break;
+    case (SIGUSR2):
+        died=2;
+    break;
+    case (SIGALRM):
+        died=3;
+    break;
+    }
+    send[0]=0;
+    send[1]=1;
+    kill(pid[p][2],SIGSTOP);
+    saveToLogs(send,pid[p][1],died);
     if (p!=-1) {
         if (pid[p][2]) {
             kill(pid[p][2],SIGKILL);
             wait(NULL);
         }
-        kill(pid[p][0],sig);
+        kill(pid[p][0],died);
     }
 }
 /**
@@ -179,7 +206,10 @@ void doStuff(char * linha) {
     }
     else if (!strcmp(splitedinput[0],"executar") || !strcmp(splitedinput[0],"-e")) {
         write(1,"Escolheu executar uma tarefa\n",29);
-        int c=0,p[2],k,n;
+        int c=0,p[2],k,n,fF=-1,tF=-1;
+        char *toFile,*fromFile,linha[MAX];
+        toFile=NULL;
+        fromFile=NULL;
         if (tam>1) {
             signal(SIGALRM,terminate);
             signal(SIGUSR1,terminate);
@@ -189,7 +219,15 @@ void doStuff(char * linha) {
             splitedinput[tam-1][i]='\0';
             for (i=1;i<tam;i++,c++) {
                 for (j=0;i<tam && strcmp(splitedinput[i],"|");i++,j++) {
-                    comando[c][j]=splitedinput[i];
+                    if (i>0 && !strcmp(splitedinput[i-1],">")) {
+                        toFile=splitedinput[i];
+                    }
+                    else if (i>0 && !strcmp(splitedinput[i-1],"<")) {
+                        fromFile=splitedinput[i];
+                    }
+                    else if (strcmp(splitedinput[i],"<") && strcmp(splitedinput[i],">")) 
+                        comando[c][j]=splitedinput[i];
+                    else j--;
                 }
                 comando[c][j]=NULL;
             }
@@ -199,10 +237,26 @@ void doStuff(char * linha) {
                 if (tempo_execucao>0) {
                     alarm(tempo_execucao);
                 }   
+                if (fromFile) {
+                    fF=open(fromFile,O_RDONLY);
+                    if (fF!=-1) {
+                        dup2(fF,0);
+                    }
+                    else {
+                        puts("deu asneira");
+                        return;
+                    }
+                }
+                if (toFile) {
+                    tF=open(toFile,O_RDWR | O_CREAT | O_APPEND,0666);
+                    if (c==1)
+                        dup2(tF,1);
+                }
                 pipe(p);
                 if (!(i=fork())) {
                     close(p[0]);
-                    dup2(p[1],1);
+                    if (tF==-1) 
+                        dup2(p[1],1);
                     close(p[1]);
                     execvp(comando[0][0],comando[0]);
                     puts("exit");
@@ -216,7 +270,13 @@ void doStuff(char * linha) {
                     close(p[0]);
                     pipe(p);
                     if (!(k=fork())) {
-                        dup2(p[1],1);
+                        if (i==c-1 && tF!=-1) {
+                            dup2(tF,1);
+                            close(tF);
+                        }
+                        else {
+                            dup2(p[1],1);
+                        }
                         close(p[1]);
                         close(p[0]);
                         execvp(comando[i][0],comando[i]);
@@ -226,8 +286,14 @@ void doStuff(char * linha) {
                     pid[getIndexOfPID(getpid())][2]=k;
                     waitpid(k,NULL,0);
                 }
-                close(p[1]);
-                saveToLogs(p,pid[getIndexOfPID(getpid())][1]);
+                if (tF!=-1) {
+                    lseek(tF,0,SEEK_SET);
+                    while ((n=read(tF,linha,MAX))) {
+                            write(p[1],linha,n);
+                    }
+                    close(tF);
+                }
+                saveToLogs(p,pid[getIndexOfPID(getpid())][1],0);
                 exit(0);
             }
             i=addToPIDList(k);
