@@ -8,6 +8,7 @@
 #include <signal.h>
 
 void main() {
+    write(1,"ola",3);
     sleep(10000);
-    puts("ola");
+    puts("end");
 }
