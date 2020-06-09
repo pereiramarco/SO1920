@@ -548,9 +548,14 @@ void doStuff(char * linha) {
     }
 }
 
-void main() {
+/**
+ * Função responsável por inicializar o servidor e as suas pastas
+ */
+void initServer() {
     int n;
-    char linha[256];
+    char folder[2][10];
+    strcpy(folder[0],"files");
+    strcpy(folder[1],"backup");
     ntarefa=1;
     tempo_inatividade=-1;
     tempo_execucao=-1;
@@ -559,12 +564,25 @@ void main() {
             pid[n][j]=0;
         comand[n][0]='\0';
     }
+    for (n=0;n<2;n++) {
+        if (!fork()) {
+        execlp("mkdir","mkdir",folder[n],NULL);
+        _exit(0);
+        }
+        wait(NULL);
+    }
     mkfifo("fifo",0666);
     indextoSave = open("files/index",O_RDWR | O_APPEND  | O_CREAT, 0666);
     logtoSave = open("files/log",O_RDWR | O_APPEND | O_CREAT, 0666);
     history=open("files/history",O_RDWR | O_APPEND | O_CREAT,0666);
     reloadData();
     signal(SIGCHLD,chld_died_handler);
+}
+
+void main() {
+    int n;
+    char linha[256];
+    initServer();
     while (1) {
         fifo = open("fifo",O_RDONLY);
         while ((n=read(fifo,linha,MAX))) {
