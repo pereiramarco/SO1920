@@ -53,8 +53,8 @@ dkms.conf
 
 # Others
 
-index
-log
 argus
 fifo
 servidor
+backup/*
+files/*

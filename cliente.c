@@ -24,15 +24,18 @@ void main(int argc, char* argv[]) {
     }
     else {
         fifo=open("fifo",O_WRONLY | O_APPEND | O_CREAT,0666);
-        int tam=strlen(argv[2])+strlen(argv[1]);
-        tam+=3;
-        char s[tam];
+        char s[MAX];
         s[0]='\0';
         strcat(s,argv[1]);
-        strcat(s," '\0");
-        strcat(s,argv[2]);
-        strcat(s,"'\0");
-        write(fifo,s,tam);    
+        if (argc==3) {
+            strcat(s," ");
+            if (!strcmp(argv[1],"-e")) strcat(s,"'");
+            strcat(s,argv[2]);
+            if (!strcmp(argv[1],"-e")) strcat(s,"'");
+        }
+        strcat(s,"\n");
+        write(1,s,strlen(s));
+        write(fifo,s,strlen(s));    
     }
 
 }

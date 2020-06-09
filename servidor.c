@@ -12,16 +12,41 @@
 
 
 /*todo
---> save info for server restart
---> cat not working 
---> check task id before killing with -t
---> retirar wait de aos sigkill(maybe)
+--> cat not working
 */
 
 //pid[MAX][3] matriz que contem no indice 0 o pid do pai, no indice 1 o numero da tarefa no 2 o pid do filho vivo no 3 o pid do filho que verfica inatividade e no 4 o numero de comandos nessa tarefa
-int tempo_inatividade,tempo_execucao,pid[MAX][5],ntarefa,indextoSave,logtoSave,history,fifo;
+int tempo_inatividade,tempo_execucao,pid[MAX][5],ntarefa,indextoSave,logtoSave,history,fifo,general;
 char comand[MAX][MAX];
 
+void saveData() {
+    char s[MAX];
+    general=open("files/data",O_WRONLY | O_CREAT | O_TRUNC,0666);
+    sprintf(s,"%d %d %d\n",tempo_execucao,tempo_inatividade,ntarefa);
+    write(general,s,strlen(s));
+}
+
+void reloadData() {
+    char s[MAX],*numero;
+    general=open("files/data",O_RDONLY,0666);
+    if (general==-1) return;
+    read(general,s,MAX);
+    numero=strtok(s,split);
+    for (int i=0;numero;i++) {
+        switch (i) {
+            case (0):
+                tempo_execucao=atoi(numero);
+            break;
+            case (1):
+                tempo_inatividade=atoi(numero);
+            break;
+            case (2):
+                ntarefa=atoi(numero);
+            break;
+        }
+        numero=strtok(NULL,split);
+    }
+}
 /**
  * Função que retorna o pid de uma tarefa
  * @param task tarefa dada
@@ -75,7 +100,6 @@ void saveToLogs(int * p,int t,int died) {
     fileTemp=open(indexC,O_WRONLY | O_CREAT,0666);
     write(fileTemp,string,2);
     if (!died || pid[getIndexOfPID(c)][4]>1) {
-        puts("estou aqui");
         while((n=read(p[0],string,MAX))) {
             write(fileTemp,string,n);
             i++;
@@ -129,7 +153,8 @@ void chld_died_handler() {
     }
     write(history,c,strlen(c));
     for (int j=0;j<5;j++)
-            pid[paiID][j]=0;
+        pid[paiID][j]=0;
+    puts("ta feito");
 }
 
 /**
@@ -204,7 +229,7 @@ void doStuff(char * linha) {
     char * token;
     char * splitedinput[MAX];
     char *comando[MAX][MAX];
-    int i,tam,r=0,t,j=0;
+    int i,tam,r=0,t,j=0,m;
     token=strtok(linha,"\n");
     token=strtok(token,split);
     for (i=0;i<MAX && token;i++) {
@@ -281,7 +306,7 @@ void doStuff(char * linha) {
                     }
                 }
                 if (toFile) {
-                    tF=open(toFile,O_RDWR | O_CREAT | O_APPEND,0666);
+                    tF=open(toFile,O_RDWR | O_CREAT | O_TRUNC,0666);
                 }
                 pipe(p);
                 //lançamento do primeiro comando de uma tarefa
@@ -342,26 +367,27 @@ void doStuff(char * linha) {
                     close(p[1]);
                     // verificar inatividade
                     pipe(pi);
-                    if (!(i=fork())) {
+                    if (!(m=fork())) {
                         if (tempo_inatividade>0) {
                             signal(SIGALRM,sendsig);
                             alarm(tempo_inatividade);
                         }
                         while((n=read(p[0],caracter,MAX))) {
-                            printf("%s\n",caracter);
                             write(pi[1],caracter,n);
                             if (tempo_inatividade>0) alarm(tempo_inatividade);
                         }
                         exit(0);
                     }
                     //wait for the transaction of the info
-                    pid[getIndexOfPID(getpid())][3]=i;
-                    waitpid(i,NULL,0);
+                    pid[getIndexOfPID(getpid())][3]=m;
+                    waitpid(m,NULL,0);
                     waitpid(k,NULL,0);
                 }
                 if (tF!=-1) {
                     lseek(tF,0,SEEK_SET);
+                    printf("tou a escrever no pid o seguinte:\n");
                     while ((n=read(tF,linha,MAX))) {
+                            printf("%s\n",linha);
                             write(pi[1],linha,n);
                     }
                     close(tF);
@@ -396,7 +422,9 @@ void doStuff(char * linha) {
         puts("termina");
         if (tam>1) {
             int p=getPIDOfTask(atoi(splitedinput[1]));
-            kill(p,SIGUSR1);
+            if (p>0)
+                kill(p,SIGUSR1);
+            else puts("tarefa não existe");
         }
         else r=1;
     }
@@ -410,7 +438,7 @@ void doStuff(char * linha) {
     }
     else if (!strcmp(splitedinput[0],"ajuda") || !strcmp(splitedinput[0],"-h")) {
         puts("ajuda");
-        printf("Executar task: -e ou executar 'comando1 | comando2 | ...'\nMudar tempo inatividade: -i ou tempo-inatividade n(segundos)\nMudar tempo execução: -m ou tempo-execucao n(segundos)\nListar tarefas: -l ou listar\nTerminar tarefa: -t ou terminar n(numero da tarefa)\nVer histórico: -r ou historico\n");
+        printf("Executar task: -e ou executar 'comando1 | comando2 | ...'\nMudar tempo inatividade: -i ou tempo-inatividade n(segundos)\nMudar tempo execução: -m ou tempo-execucao n(segundos)\nListar tarefas: -l ou listar\nTerminar tarefa: -t ou terminar n(numero da tarefa)\nVer histórico: -r ou historico\nGuardar backup da info atual: -b ou backup\nApagar data atualmente carregada: -c ou clean\nCarregar a data de um dos backups: -l ou load");
     }
     else if (!strcmp(splitedinput[0],"output") || !strcmp(splitedinput[0],"-o")) {
         puts("consultar output");
@@ -439,7 +467,7 @@ void doStuff(char * linha) {
                 }
                 task = strtol (linha,&character,10);
                 beg = strtol (character,&character,10);
-                end = strtol (character,NULL,10);
+                end = strtol (character,NULL,10)+1;
                 if (task==i || lseek(indextoSave,0,SEEK_CUR)==maxend)
                     break;
             }
@@ -453,6 +481,66 @@ void doStuff(char * linha) {
             }
         }
         else r=1;
+    }
+    else if (!strcmp(splitedinput[0],"-b") || !strcmp(splitedinput[0],"backup")) {
+        int p[2],i,fF,fT,n;
+        char nome[MAX],spinner[MAX],linha[MAX];
+        pipe(p);
+        if (!(i=fork())) {
+            dup2(p[1],1);
+            close(p[1]);
+            close(p[0]);
+            execlp("date","date",NULL);
+            _exit(0);
+        }
+        close(p[1]);
+        waitpid(i,NULL,0);
+        read(p[0],nome,MAX);
+        strcpy(spinner,"backup/");
+        strcat(spinner,nome);
+        if (!(i=fork())) {
+            execlp("mkdir","mkdir",spinner,NULL);
+            _exit(0);
+        }
+        waitpid(i,NULL,0);
+        for (i=0;i<4;i++) {
+            spinner[0]='\0';
+            strcpy(spinner,"backup/");
+            strcat(spinner,nome);
+            switch (i)
+            {
+            case 0:
+                fF=open("files/data",O_RDONLY);
+                strcat(spinner,"/data");
+                break;
+            case 1:
+                fF=open("files/history",O_RDONLY);
+                strcat(spinner,"/history");
+                break;
+            case 2:
+                fF=open("files/index",O_RDONLY);
+                strcat(spinner,"/index");
+                break;
+            default:
+                fF=open("files/log",O_RDONLY);
+                strcat(spinner,"/log");
+                break;
+            }
+            fT=open(spinner,O_WRONLY | O_CREAT | O_TRUNC,0666);
+            while ((n=read(fF,linha,MAX-1))) {
+                write(fT,linha,n);
+            }
+            close(fF);
+            close(fT);
+        }
+    }
+    else if (!strcmp(splitedinput[0],"-c") || !strcmp(splitedinput[0],"clean")) {
+        indextoSave=open("files/index",O_RDWR | O_TRUNC | O_APPEND);
+        history=open("files/history",O_RDWR | O_TRUNC | O_APPEND);
+        logtoSave=open("files/log",O_RDWR | O_TRUNC | O_APPEND);
+        tempo_inatividade=-1;
+        tempo_execucao=-1;
+        ntarefa=1;
     }
     else r=1;
     if (r) {
@@ -472,14 +560,16 @@ void main() {
         comand[n][0]='\0';
     }
     mkfifo("fifo",0666);
-    indextoSave = open("index",O_RDWR | O_APPEND | O_CREAT, 0666);
-    logtoSave = open("log",O_RDWR | O_APPEND | O_CREAT, 0666);
-    history=open("history",O_RDWR | O_APPEND | O_CREAT,0666);
+    indextoSave = open("files/index",O_RDWR | O_APPEND  | O_CREAT, 0666);
+    logtoSave = open("files/log",O_RDWR | O_APPEND | O_CREAT, 0666);
+    history=open("files/history",O_RDWR | O_APPEND | O_CREAT,0666);
+    reloadData();
     signal(SIGCHLD,chld_died_handler);
     while (1) {
         fifo = open("fifo",O_RDONLY);
         while ((n=read(fifo,linha,MAX))) {
             doStuff(linha);
+            saveData();
         }
         puts("client closed");
     }
