@@ -18,5 +18,5 @@ cliente: cliente.c
 	gcc -o argus cliente.c
 
 clean:
-	rm -rf *.o fifo index log argus servidor
+	rm -rf *.o userin userout files/ backup/ argus servidor
 

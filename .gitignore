@@ -54,7 +54,8 @@ dkms.conf
 # Others
 
 argus
-fifo
+userin
+userout
 servidor
 backup/*
 files/*

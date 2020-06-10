@@ -6,24 +6,28 @@
 #include <sys/stat.h>
 
 #define MAX 256
+#define SEND 2048
 
 void main(int argc, char* argv[]) {
-    int fifo,n;
-    char buff[MAX+1];
+    int fifo,n,output;
+    char buff[MAX+1],receive[SEND];
+    output=open("userout",O_RDONLY | O_CREAT,0666);
+    fifo=open("userin",O_WRONLY | O_CREAT,0666);
     if (argc==1) {
         while (1) {
-            fifo=open("fifo",O_WRONLY | O_APPEND | O_CREAT,0666);
             write(1,"ARGUS$=|> ",10);
-            if ((n=read(0,buff,MAX)))
+            if ((n=read(0,buff,MAX))) {
                 write(fifo,buff,n);
+            }
             else  {
-                close(fifo);
                 write(1,"\n",1);
+            }
+            if ((n=read(output,receive,SEND))) {
+                write(1,receive,n);
             }
         }
     }
     else {
-        fifo=open("fifo",O_WRONLY | O_APPEND | O_CREAT,0666);
         char s[MAX];
         s[0]='\0';
         strcat(s,argv[1]);
@@ -37,5 +41,7 @@ void main(int argc, char* argv[]) {
         write(1,s,strlen(s));
         write(fifo,s,strlen(s));    
     }
+    close(output);
+    close(fifo);
 
 }
