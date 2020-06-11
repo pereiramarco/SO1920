@@ -308,7 +308,6 @@ void doStuff(char * linha) {
                         kill(getppid(),SIGSTOP);
                     }
                 }
-                close(output);//closing client side
                 if (toFile) {
                     tF=open(toFile,O_RDWR | O_CREAT | O_TRUNC,0666);
                 }
@@ -431,7 +430,7 @@ void doStuff(char * linha) {
                 kill(p,SIGUSR1);
                 write(output,"Tarefa terminada\n",17);
             }
-            else write(output,"Tarefa não existe ou já terminou\n",33);
+            else write(output,"Tarefa não existe ou já terminou\n",35);
         }
         else r=1;
     }
@@ -441,7 +440,7 @@ void doStuff(char * linha) {
         int n;
         lseek(history,0,SEEK_SET);
         strcat(send,"#####HISTORY#####\n");
-        while((n=read(history,c,MAX))) {
+        while((n=read(history,c,MAX-2))) {
             strcat(send,c);
             i++;
         }
@@ -449,7 +448,7 @@ void doStuff(char * linha) {
         else write(output,send,strlen(send));
     }
     else if (!strcmp(splitedinput[0],"ajuda") || !strcmp(splitedinput[0],"-h")) {
-        write(output,"Executar task: -e ou executar 'comando1 | comando2 | ...'\nMudar tempo inatividade: -i ou tempo-inatividade n(segundos)\nMudar tempo execução: -m ou tempo-execucao n(segundos)\nListar tarefas: -l ou listar\nTerminar tarefa: -t ou terminar n(numero da tarefa)\nVer histórico: -r ou historico\nGuardar backup da info atual: -b ou backup\nApagar data atualmente carregada: -c ou clean\nCarregar a data de um dos backups: -f ou fill\n",424);
+        write(output,"Executar task: -e ou executar 'comando1 | comando2 | ...'\nMudar tempo inatividade: -i ou tempo-inatividade n(segundos)\nMudar tempo execução: -m ou tempo-execucao n(segundos)\nListar tarefas: -l ou listar\nTerminar tarefa: -t ou terminar n(numero da tarefa)\nVer histórico: -r ou historico\nVer o output de uma tarefa: -o ou output n(numero da tarefa)\nGuardar backup da info atual: -b ou backup\nApagar data atualmente carregada: -c ou clean\nCarregar a data de um dos backups: -f ou fill 'nome do backup'\n",502);
     }
     else if (!strcmp(splitedinput[0],"output") || !strcmp(splitedinput[0],"-o")) {
         char chari;
@@ -513,7 +512,6 @@ void doStuff(char * linha) {
         nome[strlen(nome)-1]='\0';
         strcpy(spinner,"backup/");
         strcat(spinner,nome);
-        printf("nome : %s",spinner);
         if (!(i=fork())) {
             execlp("mkdir","mkdir",spinner,NULL);
             _exit(0);
@@ -582,7 +580,6 @@ void doStuff(char * linha) {
                     case 0:
                         strcat(spinner,"//data");
                         in=open(spinner,O_RDONLY);
-                        printf("%d e %s e compare %d\n",in,spinner,strcmp(spinner,"backup/'qua 10 jun 2020 21:25:23 WEST'/data"));
                         out=open("files/data",O_WRONLY | O_CREAT | O_TRUNC,0666);
                     break;
                     case 1:

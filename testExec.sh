@@ -1,6 +1,8 @@
 #!/bin/bash
-
-./argus -e 'ls | wc | ls | ./p1'
+gcc -o p1 p1.c
+make cliente
+sleep 0.5
+./argus -e 'ls | grep argus | wc | ./p1'
 echo -e "\n"
 sleep 1
 ./argus -t 1
@@ -14,11 +16,11 @@ sleep 1
 echo -e "\n"
 ./argus -l
 echo -e "\n"
-./argus -i 5
+./argus -i 2
 echo -e "\n"
 ./argus -e './p1'
 echo -e "\n"
-./argus -m 2
+./argus -m 1
 echo -e "\n"
 ./argus -e './p1'
 echo -e "\n"
@@ -26,7 +28,7 @@ echo -e "\n"
 echo -e "\n"
 ./argus -o 1
 echo -e "\n"
-sleep 6
+sleep 3
 ./argus -r
 echo -e "\n" 
 ./argus -h
