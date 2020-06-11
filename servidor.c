@@ -243,12 +243,16 @@ void doStuff(char * linha) {
     if (!strcmp(splitedinput[0],"tempo-inactividade") || !strcmp(splitedinput[0],"-i")) {
         if (tam==2 && (t=atoi(splitedinput[1]))) {
             tempo_inatividade=t;
+            sprintf(send,"Novo tempo de inatividade: %d\n",tempo_inatividade);
+            write(output,send,strlen(send));
         }
         else r=1;
     }
     else if (!strcmp(splitedinput[0],"tempo-execucao") || !strcmp(splitedinput[0],"-m")) {
         if (tam==2 && (t=atoi(splitedinput[1]))) {
             tempo_execucao=t;
+            sprintf(send,"Novo tempo de execução: %d\n",tempo_execucao);
+            write(output,send,strlen(send));
         }
         else r=1;
     }
@@ -609,6 +613,7 @@ void doStuff(char * linha) {
                     close(out);
                 }
             }
+            write(output,"Os dados de um backup foram carregados para o servidor\n",55);
         }
         else r=1;
     }

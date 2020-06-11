@@ -33,13 +33,14 @@ void main(int argc, char* argv[]) {
         strcat(s,argv[1]);
         if (argc==3) {
             strcat(s," ");
-            if (!strcmp(argv[1],"-e")) strcat(s,"'");
+            if (!strcmp(argv[1],"-e") || !strcmp(argv[1],"-b")) strcat(s,"'");
             strcat(s,argv[2]);
-            if (!strcmp(argv[1],"-e")) strcat(s,"'");
+            if (!strcmp(argv[1],"-e") || !strcmp(argv[1],"-b")) strcat(s,"'");
         }
         strcat(s,"\n");
-        write(1,s,strlen(s));
-        write(fifo,s,strlen(s));    
+        write(fifo,s,strlen(s));  
+        if ((n=read(output,receive,SEND)))
+            write(1,receive,n);  
     }
     close(output);
     close(fifo);
