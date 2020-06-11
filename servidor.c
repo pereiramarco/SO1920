@@ -14,8 +14,7 @@
 
 /*todo
 --> cat not working
---> output reads one at a time
---> client closes and it waits actively for input
+--> output option reads one at a time
 */
 
 //pid[MAX][3] matriz que contem no indice 0 o pid do pai, no indice 1 o numero da tarefa no 2 o pid do filho vivo no 3 o pid do filho que verfica inatividade e no 4 o numero de comandos nessa tarefa
@@ -642,7 +641,8 @@ void initServer() {
         }
         wait(NULL);
     }
-    mkfifo("fifo",0666);
+    mkfifo("userin",0666);
+    mkfifo("userout",0666);
     indextoSave = open("files/index",O_RDWR | O_APPEND  | O_CREAT, 0666);
     logtoSave = open("files/log",O_RDWR | O_APPEND | O_CREAT, 0666);
     history=open("files/history",O_RDWR | O_APPEND | O_CREAT,0666);
@@ -656,12 +656,10 @@ void main() {
     output = open("userout",O_WRONLY,0666);
     fifo = open("userin",O_RDONLY,0666);
     while (1) {
-        puts("vou outra vez");
         if (read(fifo,linha,MAX)) {
             doStuff(linha);
             saveData();
         }
-        puts("sai do ciclo");
     }
     close(output);
     close(fifo);
