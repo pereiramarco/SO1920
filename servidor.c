@@ -8,7 +8,7 @@
 #include <signal.h>
 
 #define MAX 256
-#define SEND 2048
+#define SEND 256
 #define split " "
 
 
@@ -300,7 +300,7 @@ void doStuff(char * linha) {
                         write(output,"Erro ao abrir o ficheiro destino\n",33);
                         return;
                     }
-                }             
+                }           
                 else {
                     if (!strcmp(comando[0][0],"cat") && fF==-1) {
                         dup2(fifo,0);
@@ -308,6 +308,7 @@ void doStuff(char * linha) {
                         kill(getppid(),SIGSTOP);
                     }
                 }
+                close(output);  // closing output 
                 if (toFile) {
                     tF=open(toFile,O_RDWR | O_CREAT | O_TRUNC,0666);
                 }
@@ -409,19 +410,18 @@ void doStuff(char * linha) {
         else r=1;
     }
     else if (!strcmp(splitedinput[0],"listar") || !strcmp(splitedinput[0],"-l")) {
-        strcat(send,"######TASKS######\n");
         char c[MAX];
         int j=0;
         for (i=0;i<MAX;i++) {
             if (pid[i][0]) {
+                if (i==0) write(output,"######TASKS######\n",18);
                 c[0]='\0';
                 sprintf(c,"Tarefa %d em execução!\n",pid[i][1]);
-                strcat(send,c);
+                write(output,c,strlen(c));
                 j++;
             }
         }
         if (!j) write(output,"Nada a apresentar\n",18);
-        else write(output,send,strlen(send));
     }
     else if (!strcmp(splitedinput[0],"terminar") || !strcmp(splitedinput[0],"-t")) {
         if (tam>1) {
@@ -439,16 +439,15 @@ void doStuff(char * linha) {
         int i=0;
         int n;
         lseek(history,0,SEEK_SET);
-        strcat(send,"#####HISTORY#####\n");
+        write(output,"#####HISTORY#####\n",18);
         while((n=read(history,c,MAX-2))) {
-            strcat(send,c);
+            write(output,c,n);
             i++;
         }
         if (!i) write(output,"Nada a apresentar\n",18);
-        else write(output,send,strlen(send));
     }
     else if (!strcmp(splitedinput[0],"ajuda") || !strcmp(splitedinput[0],"-h")) {
-        write(output,"Executar task: -e ou executar 'comando1 | comando2 | ...'\nMudar tempo inatividade: -i ou tempo-inatividade n(segundos)\nMudar tempo execução: -m ou tempo-execucao n(segundos)\nListar tarefas: -l ou listar\nTerminar tarefa: -t ou terminar n(numero da tarefa)\nVer histórico: -r ou historico\nVer o output de uma tarefa: -o ou output n(numero da tarefa)\nGuardar backup da info atual: -b ou backup\nApagar data atualmente carregada: -c ou clean\nCarregar a data de um dos backups: -f ou fill 'nome do backup'\n",502);
+        write(output,"Executar task: -e ou executar 'comando1 | comando2 | ...'\nMudar tempo inatividade: -i ou tempo-inatividade n(segundos)\nMudar tempo execução: -m ou tempo-execucao n(segundos)\nListar tarefas: -l ou listar\nTerminar tarefa: -t ou terminar n(numero da tarefa)\nVer histórico: -r ou historico\nVer o output de uma tarefa: -o ou output n(numero da tarefa)\nGuardar backup da info atual: -b ou backup\nApagar data atualmente carregada: -c ou clean\nCarregar a data de um dos backups: -f ou fill 'nome do backup'\nSair: quit\n",513);
     }
     else if (!strcmp(splitedinput[0],"output") || !strcmp(splitedinput[0],"-o")) {
         char chari;
@@ -481,16 +480,15 @@ void doStuff(char * linha) {
                     break;
             }
             if (task!=i) {
-                write(output,"Tarefa não existente\n",21);
+                write(output,"Tarefa não existente\n",22);
                 return;
             }
             send[0]='\0';
             linha[0]='\0';
             lseek(logtoSave,beg,SEEK_SET);
             while ((n=read(logtoSave,&chari,1)) && end!=lseek(logtoSave,0,SEEK_CUR)) {
-                strcat(send,&chari);
+                write(output,&chari,1);
             }
-            write(output,send,strlen(send));
         }
         else r=1;
     }
@@ -645,7 +643,7 @@ void initServer() {
     }
     mkfifo("userin",0666);
     mkfifo("userout",0666);
-    indextoSave = open("files/index",O_RDWR | O_APPEND  | O_CREAT, 0666);
+    indextoSave = open("files/index",O_RDWR | O_APPEND | O_CREAT, 0666);
     logtoSave = open("files/log",O_RDWR | O_APPEND | O_CREAT, 0666);
     history=open("files/history",O_RDWR | O_APPEND | O_CREAT,0666);
     reloadData();
@@ -655,14 +653,14 @@ void initServer() {
 void main() {
     char linha[256];
     initServer();
-    output = open("userout",O_WRONLY,0666);
-    fifo = open("userin",O_RDONLY,0666);
     while (1) {
-        if (read(fifo,linha,MAX)) {
+        fifo = open("userin",O_RDONLY,0666);
+        while (read(fifo,linha,MAX)) {
+            output = open("userout",O_WRONLY,0666);
             doStuff(linha);
             saveData();
+            close(output);
         }
+        close(fifo);
     }
-    close(output);
-    close(fifo);
 }

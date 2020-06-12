@@ -11,20 +11,23 @@
 void main(int argc, char* argv[]) {
     int fifo,n,output;
     char buff[MAX+1],receive[SEND];
-    output=open("userout",O_RDONLY,0666);
-    fifo=open("userin",O_WRONLY,0666);
     if (argc==1) {
         while (1) {
             write(1,"ARGUS$=|> ",10);
+            fifo=open("userin",O_WRONLY,0666);  
             if ((n=read(0,buff,MAX))) {
+                if (!strcmp(buff,"quit\n")) break;
                 write(fifo,buff,n);
+                output=open("userout",O_RDONLY,0666);
+                while ((n=read(output,receive,SEND))) {
+                    write(1,receive,n);
+                }
+                close(output);
             }
             else  {
                 write(1,"\n",1);
             }
-            if ((n=read(output,receive,SEND))) {
-                write(1,receive,n);
-            }
+            close(fifo);
         }
     }
     else {
@@ -38,11 +41,13 @@ void main(int argc, char* argv[]) {
             if (!strcmp(argv[1],"-e") || !strcmp(argv[1],"-b")) strcat(s,"'");
         }
         strcat(s,"\n");
-        write(fifo,s,strlen(s));  
+        fifo=open("userin",O_WRONLY,0666);  
+        write(fifo,s,strlen(s)); 
+        close(fifo); 
+        output=open("userout",O_RDONLY,0666);
         if ((n=read(output,receive,SEND)))
-            write(1,receive,n);  
+            write(1,receive,n); 
+        close(output); 
     }
-    close(output);
-    close(fifo);
 
 }
