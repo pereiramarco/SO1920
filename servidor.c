@@ -14,7 +14,8 @@
 
 /*todo
 --> cat not working
---> output option reads one at a time
+--> output option reads one at a time "papel com explicacao de redolver"
+--> melhorar clean para limpar processos
 */
 
 //pid[MAX][3] matriz que contem no indice 0 o pid do pai, no indice 1 o numero da tarefa no 2 o pid do filho vivo no 3 o pid do filho que verfica inatividade e no 4 o numero de comandos nessa tarefa
@@ -576,7 +577,7 @@ void doStuff(char * linha) {
                 strcat(spinner,nome);
                 switch (i) {
                     case 0:
-                        strcat(spinner,"//data");
+                        strcat(spinner,"/data");
                         in=open(spinner,O_RDONLY);
                         out=open("files/data",O_WRONLY | O_CREAT | O_TRUNC,0666);
                     break;

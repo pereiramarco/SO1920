@@ -45,7 +45,7 @@ void main(int argc, char* argv[]) {
         write(fifo,s,strlen(s)); 
         close(fifo); 
         output=open("userout",O_RDONLY,0666);
-        if ((n=read(output,receive,SEND)))
+        while ((n=read(output,receive,SEND)))
             write(1,receive,n); 
         close(output); 
     }

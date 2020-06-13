@@ -1,8 +1,9 @@
 #!/bin/bash
-gcc -o p1 p1.c
 make cliente
 sleep 0.5
-./argus -e 'ls | grep argus | wc | ./p1'
+./argus -c
+echo -e "\n"
+./argus -e 'ls | grep argus | wc | sleep 1000'
 echo -e "\n"
 sleep 1
 ./argus -t 1
@@ -18,17 +19,20 @@ echo -e "\n"
 echo -e "\n"
 ./argus -i 2
 echo -e "\n"
-./argus -e './p1'
+./argus -e 'sleep 1 | sleep 1 | sleep 1 | echo "hey" | sleep 1000'
 echo -e "\n"
 ./argus -m 1
 echo -e "\n"
-./argus -e './p1'
+./argus -e 'sleep 1000'
 echo -e "\n"
 ./argus -l
 echo -e "\n"
 ./argus -o 1
 echo -e "\n"
-sleep 3
+sleep 6
+echo -e "\n"
+./argus -o 5
+echo -e "\n"
 ./argus -r
 echo -e "\n" 
 ./argus -h
