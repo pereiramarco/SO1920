@@ -18,5 +18,4 @@ cliente: cliente.c
 	gcc -o argus cliente.c
 
 clean:
-	rm -rf *.o userin userout files/ backup/ argus servidor p1 aqui ali
-
+	rm -rf *.o userin userout files/ backup/ argus servidor p1 p2 aqui ali

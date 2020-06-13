@@ -14,12 +14,10 @@
 
 /*todo
 --> cat not working
---> output option reads one at a time "papel com explicacao de redolver"
---> melhorar clean para limpar processos
 */
 
-//pid[MAX][3] matriz que contem no indice 0 o pid do pai, no indice 1 o numero da tarefa no 2 o pid do filho vivo no 3 o pid do filho que verfica inatividade e no 4 o numero de comandos nessa tarefa
-int tempo_inatividade,tempo_execucao,pid[MAX][5],ntarefa,indextoSave,logtoSave,history,fifo,general,output;
+//pid[MAX][MAX] matriz que contem no indice 0 o pid do pai, no indice 1 o numero da tarefa no 2 o pid do numero de filhos no 3 numero de comandos nessa tarefa e nos restantes o pid dos filhos que se encontram a executar
+int tempo_inatividade,tempo_execucao,pid[MAX][MAX],ntarefa,indextoSave,logtoSave,history,fifo,general,output;
 char comand[MAX][MAX];
 
 void saveData() {
@@ -86,7 +84,7 @@ int getIndexOfPID(int pidd) {
  */ 
 void addProcess(int p,int pai) {
     int i=getIndexOfPID(pai);
-    pid[i][2]=p;
+    pid[i][4+pid[i][2]++]=p;
 }
 
 /**
@@ -96,21 +94,19 @@ void addProcess(int p,int pai) {
  */
 void saveToLogs(int * p,int t,int died) {
     char string[MAX],indexC[MAX];
-    int n,i=0,startsAt,total=0,fileTemp,c=getPIDOfTask(t);
+    int n,startsAt,total=0,fileTemp,c=getPIDOfTask(t);
     indexC[0]='\0';
-    close(p[1]);
     sprintf(indexC,"%d",c);
     sprintf(string,"%d\n",died);
     fileTemp=open(indexC,O_WRONLY | O_CREAT,0666);
     write(fileTemp,string,2);
-    if (!died || pid[getIndexOfPID(c)][4]>1) {
+    if (!died) {
+        close(p[1]);
         while((n=read(p[0],string,MAX))) {
             write(fileTemp,string,n);
-            i++;
         }
     }
-    if (!i)
-        write(fileTemp,"No output\n",10);
+    close(fileTemp);
 }
 
 
@@ -118,7 +114,7 @@ void saveToLogs(int * p,int t,int died) {
  * Função que é ativada quando uma tarefa morre, desta forma pode guardar no histórico a forma como morreu e salvar no ficheiro log e index os dados da mesma
  */
 void chld_died_handler() {
-    int e,pai = wait(&e),n,beg=0;
+    int e,pai = wait(&e),n,beg=0,i=0;
     int paiID=getIndexOfPID(pai),task=pid[paiID][1];
     char c[MAX],fileToRem[MAX];
     c[0]='\0';
@@ -132,6 +128,10 @@ void chld_died_handler() {
         beg=lseek(logtoSave,0,SEEK_END);
         while((n=read(tempFile,c,MAX))) {
             write(logtoSave,c,n);
+            i++;
+        }
+        if ((i==0) || (i==1 && n == 2)) {
+            write(logtoSave,"No output\n",10);
         }
         c[0]='\0';
         sprintf(c,"%d %d %d\n",pid[paiID][1],beg,lseek(logtoSave,0,SEEK_END));
@@ -150,13 +150,15 @@ void chld_died_handler() {
         case (2):
             sprintf(c,"#%d, max execução: %s\n",task,comand[task]);
         break;
-        default:
+        case (3):
             sprintf(c,"#%d, max inatividade: %s\n",task,comand[task]);
+        break;
+        default :
         break;
         
     }
     write(history,c,strlen(c));
-    for (int j=0;j<5;j++)
+    for (int j=0;j<MAX;j++)
         pid[paiID][j]=0;
 }
 
@@ -165,9 +167,10 @@ void chld_died_handler() {
  * @param s sinal que ativou esta função
  */
 void terminate(int s) {
+    int j;
     int k=getpid();
     int p=getIndexOfPID(k);
-    int i,died,send[2];
+    int i,died;
     switch (s) {
     case (SIGUSR1): 
         died=1;
@@ -179,22 +182,20 @@ void terminate(int s) {
         died=3;
     break;
     }
-    send[0]=0;
-    send[1]=1;
-    kill(pid[p][2],SIGSTOP);
-    saveToLogs(send,pid[p][1],died);
     if (p!=-1) {
-        if (pid[p][2]) {
-            kill(pid[p][2],SIGKILL);
-            wait(NULL);
-            if (pid[p][3]) {
-                kill(pid[p][3],SIGKILL);
-                wait(NULL);
+        for (j=4;j<3+pid[p][2];j++)
+            kill(pid[p][j],SIGSTOP);
+        saveToLogs(NULL,pid[p][1],died);
+        for (j=4;j<4+pid[p][2];j++) {
+            if (pid[p][j]) {
+                kill(pid[p][j],SIGKILL);
+                pid[p][j]=0;
             }
         }
         kill(pid[p][0],SIGKILL);
-        for (int j=0;j<5;j++)
-            pid[p][j]=0;
+        for (i=0;i<4;i++) {
+            pid[p][i]=0;
+        }
     }
 }
 /**
@@ -274,9 +275,11 @@ void doStuff(char * linha) {
                 for (j=0;i<tam && strcmp(splitedinput[i],"|");i++,j++) {
                     if (i>0 && !strcmp(splitedinput[i-1],">")) {
                         toFile=splitedinput[i];
+                        j--;
                     }
                     else if (i>0 && !strcmp(splitedinput[i-1],"<")) {
                         fromFile=splitedinput[i];
+                        j--;
                     }
                     else if (strcmp(splitedinput[i],"<") && strcmp(splitedinput[i],">")) 
                         comando[c][j]=splitedinput[i];
@@ -286,7 +289,7 @@ void doStuff(char * linha) {
             }
             if (!(k=fork())) {
                 addToPIDList(getpid());
-                pid[getIndexOfPID(getpid())][4]=c;
+                pid[getIndexOfPID(getpid())][3]=c;
                 signal(SIGCHLD,SIG_IGN);
                 if (tempo_execucao>0) {
                     alarm(tempo_execucao);
@@ -301,19 +304,13 @@ void doStuff(char * linha) {
                         write(output,"Erro ao abrir o ficheiro destino\n",33);
                         return;
                     }
-                }           
-                else {
-                    if (!strcmp(comando[0][0],"cat") && fF==-1) {
-                        dup2(fifo,0);
-                        close(fifo);
-                        kill(getppid(),SIGSTOP);
-                    }
                 }
                 close(output);  // closing output 
                 if (toFile) {
-                    tF=open(toFile,O_RDWR | O_CREAT | O_TRUNC,0666);
+                    tF=open(toFile,O_WRONLY | O_CREAT | O_TRUNC,0666);
                 }
                 pipe(p);
+                int papa;
                 //lançamento do primeiro comando de uma tarefa
                 if (!(i=fork())) {
                     close(p[0]);
@@ -321,34 +318,35 @@ void doStuff(char * linha) {
                         dup2(tF,1);
                         close(tF);
                     }
-                    else 
+                    else
                         dup2(p[1],1);
                     close(p[1]);
                     execvp(comando[0][0],comando[0]);
                     write(1,"Erro ao correr comando\n",23);
                     exit(0);
                 }
-                pid[getIndexOfPID(getpid())][2]=i;
+                papa=getpid();
+                addProcess(i,papa);
                 close(p[1]);
                 //verificar tempo inatividade para a primeira tarefa
                 pipe(pi);
                 if (!(i=fork())) {
-                        if (tempo_inatividade>0) {
-                            signal(SIGALRM,sendsig);
-                            alarm(tempo_inatividade);
-                        }
-                        while((n=read(p[0],caracter,MAX))) {
-                            write(pi[1],caracter,n);
-                            if (tempo_inatividade>0) alarm(tempo_inatividade);
-                        }
-                        exit(0);
+                    dup2(pi[1],1);
+                    close(pi[0]);
+                    close(pi[1]);
+                    if (tempo_inatividade>0) {
+                        signal(SIGALRM,sendsig);
+                        alarm(tempo_inatividade);
                     }
-                //
-                pid[getIndexOfPID(getpid())][3]=k;
-                waitpid(k,NULL,0);
-                waitpid(i,NULL,0);
+                    while((n=read(p[0],caracter,MAX))) {
+                        write(1,caracter,n);
+                        if (tempo_inatividade>0) alarm(tempo_inatividade);
+                    }
+                    exit(0);
+                }
+                addProcess(i,papa); 
                 // lançar a execução de comandos encadeados por |
-                for (i=1;i<c;i++) {
+                for (i=1;i<c-1;i++) {
                     dup2(pi[0],0);
                     close(pi[1]);
                     close(pi[0]);
@@ -367,40 +365,70 @@ void doStuff(char * linha) {
                         write(1,"Erro ao correr comando\n",23);
                         exit(0);
                     }
-                    // 
-                    pid[getIndexOfPID(getpid())][2]=k;
+                    addProcess(k,getpid());
                     close(p[1]);
                     // verificar inatividade
                     pipe(pi);
                     if (!(m=fork())) {
+                        dup2(pi[1],1);
+                        close(pi[0]);
+                        close(pi[1]);
                         if (tempo_inatividade>0) {
                             signal(SIGALRM,sendsig);
                             alarm(tempo_inatividade);
                         }
                         while((n=read(p[0],caracter,MAX))) {
-                            write(pi[1],caracter,n);
+                            write(1,caracter,n);
                             if (tempo_inatividade>0) alarm(tempo_inatividade);
                         }
                         exit(0);
                     }
-                    //wait for the transaction of the info
-                    pid[getIndexOfPID(getpid())][3]=m;
-                    waitpid(m,NULL,0);
-                    waitpid(k,NULL,0);
+                    addProcess(m,getpid());
                 }
-                if (tF!=-1) {
-                    lseek(tF,0,SEEK_SET);
-                    while ((n=read(tF,linha,MAX))) {
-                            write(pi[1],linha,n);
+                if (c-1>0) {
+                    dup2(pi[0],0);
+                    close(pi[1]);
+                    close(pi[0]);
+                    pipe(p);
+                    if (!(k=fork())) {
+                        if (i==c-1 && tF!=-1) {
+                            dup2(tF,1);
+                            close(tF);
+                        }
+                        else {
+                            dup2(p[1],1);
+                        }
+                        close(p[1]);
+                        close(p[0]);
+                        execvp(comando[i][0],comando[i]);
+                        write(1,"Erro ao correr comando\n",23);
+                        exit(0);
                     }
-                    close(tF);
+                    addProcess(k,getpid());
+                    close(p[1]);
+                    // verificar inatividade
+                    pipe(pi);
+                    if (!(m=fork())) {
+                        dup2(pi[1],1);
+                        close(pi[0]);
+                        close(pi[1]);
+                        if (tempo_inatividade>0) {
+                            signal(SIGALRM,sendsig);
+                            alarm(tempo_inatividade);
+                        }
+                        while((n=read(p[0],caracter,MAX))) {
+                            write(1,caracter,n);
+                            if (tempo_inatividade>0) alarm(tempo_inatividade);
+                        }
+                        exit(0);
+                    }
+                    addProcess(m,getpid());
                 }
-                kill(getppid(),SIGCONT);
                 saveToLogs(pi,pid[getIndexOfPID(getpid())][1],0);
                 exit(0);
             }
             i=addToPIDList(k);
-            pid[getIndexOfPID(k)][4]=c;
+            pid[getIndexOfPID(k)][3]=c;
             for (int j=1;j<=tam-1;j++) {
                 strcat(comand[i],splitedinput[j]);
                 strcat(comand[i]," ");
@@ -440,8 +468,8 @@ void doStuff(char * linha) {
         int i=0;
         int n;
         lseek(history,0,SEEK_SET);
-        write(output,"#####HISTORY#####\n",18);
         while((n=read(history,c,MAX-2))) {
+            if (i==0) write(output,"#####HISTORY#####\n",18);
             write(output,c,n);
             i++;
         }
@@ -487,8 +515,8 @@ void doStuff(char * linha) {
             send[0]='\0';
             linha[0]='\0';
             lseek(logtoSave,beg,SEEK_SET);
-            while ((n=read(logtoSave,&chari,1)) && end!=lseek(logtoSave,0,SEEK_CUR)) {
-                write(output,&chari,1);
+            if ((n=read(logtoSave,send,end-beg-1))) {
+                write(output,send,n);
             }
         }
         else r=1;
@@ -556,6 +584,11 @@ void doStuff(char * linha) {
         tempo_inatividade=-1;
         tempo_execucao=-1;
         ntarefa=1;
+        for (i=0;i<MAX;i++) {
+            if (pid[i][0]!=0) {
+                kill(pid[i][0],SIGUSR1);
+            }
+        }
         write(output,"All clean now\n",14);
     }
     else if (!strcmp(splitedinput[0],"-f") || !strcmp(splitedinput[0],"fill")) {
@@ -631,7 +664,7 @@ void initServer() {
     tempo_inatividade=-1;
     tempo_execucao=-1;
     for (n=0;n<MAX;n++) {
-        for (int j=0;j<5;j++)
+        for (int j=0;j<MAX;j++)
             pid[n][j]=0;
         comand[n][0]='\0';
     }
