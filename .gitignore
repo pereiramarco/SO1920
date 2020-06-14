@@ -56,7 +56,8 @@ dkms.conf
 argus
 userin
 userout
-servidor
+argusd
 backup/*
 files/*
 p1
+p2
