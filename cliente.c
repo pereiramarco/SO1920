@@ -16,6 +16,7 @@ void main(int argc, char* argv[]) {
             write(1,"ARGUS$=|> ",10);
             fifo=open("userin",O_WRONLY,0666);  
             if ((n=read(0,buff,MAX))) {
+                buff[n]='\0';
                 if (!strcmp(buff,"quit\n")) break;
                 write(fifo,buff,n);
                 output=open("userout",O_RDONLY,0666);
