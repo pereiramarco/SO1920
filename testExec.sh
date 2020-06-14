@@ -56,4 +56,8 @@ echo -e "\n"
 ./argus -t 2 #ends task 2 that was writing every 4 seconds since the beginning
 echo -2 "\n"
 ./argus -l #não devem aparecer tarefas
+echo -e "\n"
+./argus -e 'cat file' #ficheiro que contem um script de um filme
+echo -e "\n"
+./argus -o 9 #should show the script
 make clean #cleans all created files

@@ -513,7 +513,13 @@ void doStuff(char * linha) {
             send[0]='\0';
             linha[0]='\0';
             lseek(logtoSave,beg,SEEK_SET);
-            if ((n=read(logtoSave,send,end-beg-1))) {
+            int rea;
+            while (rea!=end-beg-1) {
+                if (MAX>end-beg-1-rea)
+                    n=read(logtoSave,send,end-beg-rea-1);
+                else 
+                    n=read(logtoSave,send,MAX);
+                rea+=n;
                 write(output,send,n);
             }
         }
