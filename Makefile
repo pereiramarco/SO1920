@@ -4,6 +4,8 @@
 
 
 all: argusd argus
+	mkfifo userin
+	mkfifo userout
 
 servidor: argusd
 	./argusd

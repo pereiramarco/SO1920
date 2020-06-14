@@ -513,7 +513,7 @@ void doStuff(char * linha) {
             send[0]='\0';
             linha[0]='\0';
             lseek(logtoSave,beg,SEEK_SET);
-            int rea;
+            int rea=0;
             while (rea!=end-beg-1) {
                 if (MAX>end-beg-1-rea)
                     n=read(logtoSave,send,end-beg-rea-1);
@@ -680,8 +680,6 @@ void initServer() {
         }
         wait(NULL);
     }
-    mkfifo("userin",0666);
-    mkfifo("userout",0666);
     indextoSave = open("files/log.idx",O_RDWR | O_APPEND | O_CREAT, 0666);
     logtoSave = open("files/log",O_RDWR | O_APPEND | O_CREAT, 0666);
     history=open("files/history",O_RDWR | O_APPEND | O_CREAT,0666);
