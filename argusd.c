@@ -558,8 +558,8 @@ void doStuff(char * linha) {
                 strcat(spinner,"/history");
                 break;
             case 2:
-                fF=open("files/index",O_RDONLY);
-                strcat(spinner,"/index");
+                fF=open("files/log.idx",O_RDONLY);
+                strcat(spinner,"/log.idx");
                 break;
             default:
                 fF=open("files/log",O_RDONLY);
@@ -576,7 +576,7 @@ void doStuff(char * linha) {
         write(output,"Backup saved\n",13);
     }
     else if (!strcmp(splitedinput[0],"clean")) {
-        indextoSave=open("files/index",O_RDWR | O_TRUNC | O_APPEND);
+        indextoSave=open("files/log.idx",O_RDWR | O_TRUNC | O_APPEND);
         history=open("files/history",O_RDWR | O_TRUNC | O_APPEND);
         logtoSave=open("files/log",O_RDWR | O_TRUNC | O_APPEND);
         tempo_inatividade=-1;
@@ -619,9 +619,9 @@ void doStuff(char * linha) {
                         out=open("files/history",O_WRONLY | O_CREAT | O_TRUNC,0666);
                     break;
                     case 2:
-                        strcat(spinner,"/index");
+                        strcat(spinner,"/log.idx");
                         in=open(spinner,O_RDONLY);
-                        out=open("files/index",O_WRONLY | O_CREAT | O_TRUNC,0666);
+                        out=open("files/log.idx",O_WRONLY | O_CREAT | O_TRUNC,0666);
                     break;
                     case 3:
                         strcat(spinner,"/log");
@@ -676,7 +676,7 @@ void initServer() {
     }
     mkfifo("userin",0666);
     mkfifo("userout",0666);
-    indextoSave = open("files/index",O_RDWR | O_APPEND | O_CREAT, 0666);
+    indextoSave = open("files/log.idx",O_RDWR | O_APPEND | O_CREAT, 0666);
     logtoSave = open("files/log",O_RDWR | O_APPEND | O_CREAT, 0666);
     history=open("files/history",O_RDWR | O_APPEND | O_CREAT,0666);
     reloadData();
