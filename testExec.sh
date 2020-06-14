@@ -1,5 +1,5 @@
 #!/bin/bash
-make cliente
+make argus
 gcc -o p1 p1.c
 gcc -o p2 p2.c
 sleep 0.5
@@ -54,5 +54,6 @@ echo -e "\n"
 ./argus -b #creates backup
 echo -e "\n"
 ./argus -t 2 #ends task 2 that was writing every 4 seconds since the beginning
-./argus -l
+echo -2 "\n"
+./argus -l #não devem aparecer tarefas
 make clean #cleans all created files

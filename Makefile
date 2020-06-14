@@ -3,19 +3,19 @@
 ###################Makefile#####################
 
 
-all: servidor cliente
+all: argusd argus
 
-run: servidor
-	./servidor
+servidor: argusd
+	./argusd
 
-argus: cliente
+cliente: argus
 	./argus
 
-servidor: servidor.c 
-	gcc -o servidor servidor.c
+argusd: argusd.c argus.h
+	gcc -o argusd argusd.c
 
-cliente: cliente.c
-	gcc -o argus cliente.c
+argus: argus.c argus.h
+	gcc -o argus argus.c
 
 clean:
-	rm -rf *.o userin userout files/ backup/ argus servidor p1 p2 aqui ali
+	rm -rf *.o userin userout files/ backup/ argus argusd p1 p2 aqui ali

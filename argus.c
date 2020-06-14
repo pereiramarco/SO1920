@@ -1,9 +1,4 @@
-#include <unistd.h>
-#include <fcntl.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/stat.h>
+#include "argus.h"
 
 #define MAX 256
 #define SEND 2048

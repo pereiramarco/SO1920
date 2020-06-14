@@ -1,25 +1,16 @@
-#include <unistd.h>
-#include <fcntl.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/stat.h>
-#include <sys/wait.h>
-#include <signal.h>
+#include "argus.h"
 
 #define MAX 256
-#define SEND 256
+#define SEND 512
 #define split " "
-
-
-/*todo
---> cat not working
-*/
 
 //pid[MAX][MAX] matriz que contem no indice 0 o pid do pai, no indice 1 o numero da tarefa no 2 o pid do numero de filhos no 3 numero de comandos nessa tarefa e nos restantes o pid dos filhos que se encontram a executar
 int tempo_inatividade,tempo_execucao,pid[MAX][MAX],ntarefa,indextoSave,logtoSave,history,fifo,general,output;
 char comand[MAX][MAX];
 
+/**
+ * Salva informação para o servidor ler caso vá abaixo
+ */
 void saveData() {
     char s[MAX];
     general=open("files/data",O_WRONLY | O_CREAT | O_TRUNC,0666);
@@ -28,6 +19,9 @@ void saveData() {
     close(general);
 }
 
+/**
+ * Carrega a informação escrita nos ficheiros
+ */
 void reloadData() {
     char s[MAX],*numero;
     general=open("files/data",O_RDONLY,0666);
@@ -50,6 +44,7 @@ void reloadData() {
     }
     close(general);
 }
+
 /**
  * Função que retorna o pid de uma tarefa
  * @param task tarefa dada
@@ -200,6 +195,7 @@ void terminate(int s) {
         kill(k,SIGKILL);
     }
 }
+
 /**
  * Função que atualiza a matriz pid com um processo
  * @param pidd pid da tarefa a adicionar à matriz pid
