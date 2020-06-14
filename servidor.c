@@ -136,8 +136,8 @@ void chld_died_handler() {
         c[0]='\0';
         sprintf(c,"%d %d %d\n",pid[paiID][1],beg,lseek(logtoSave,0,SEEK_END));
         write(indextoSave,c,strlen(c));
+        close(tempFile);
     }
-    close(tempFile);
     remove(fileToRem);
     c[0]='\0';
     switch (e) {
@@ -158,8 +158,10 @@ void chld_died_handler() {
         
     }
     write(history,c,strlen(c));
-    for (int j=0;j<MAX;j++)
+    for (int j=0;j<MAX;j++) {
         pid[paiID][j]=0;
+    }
+    comand[paiID][0]='\0';
 }
 
 /**
@@ -192,10 +194,10 @@ void terminate(int s) {
                 pid[p][j]=0;
             }
         }
-        kill(pid[p][0],SIGKILL);
         for (i=0;i<4;i++) {
             pid[p][i]=0;
         }
+        kill(k,SIGKILL);
     }
 }
 /**
@@ -242,7 +244,7 @@ void doStuff(char * linha) {
         token=strtok(NULL,split);
     }
     tam=i;
-    if (!strcmp(splitedinput[0],"tempo-inactividade") || !strcmp(splitedinput[0],"-i")) {
+    if (!strcmp(splitedinput[0],"tempo-inactividade")) {
         if (tam==2 && (t=atoi(splitedinput[1]))) {
             tempo_inatividade=t;
             sprintf(send,"Novo tempo de inatividade: %d\n",tempo_inatividade);
@@ -250,7 +252,7 @@ void doStuff(char * linha) {
         }
         else r=1;
     }
-    else if (!strcmp(splitedinput[0],"tempo-execucao") || !strcmp(splitedinput[0],"-m")) {
+    else if (!strcmp(splitedinput[0],"tempo-execucao")) {
         if (tam==2 && (t=atoi(splitedinput[1]))) {
             tempo_execucao=t;
             sprintf(send,"Novo tempo de execução: %d\n",tempo_execucao);
@@ -258,7 +260,7 @@ void doStuff(char * linha) {
         }
         else r=1;
     }
-    else if (!strcmp(splitedinput[0],"executar") || !strcmp(splitedinput[0],"-e")) {
+    else if (!strcmp(splitedinput[0],"executar")) {
         int c=0,p[2],pi[2],k,n,fF=-1,tF=-1;
         char *toFile,*fromFile,linha[MAX],caracter[MAX];
         toFile=NULL;
@@ -438,11 +440,11 @@ void doStuff(char * linha) {
         }
         else r=1;
     }
-    else if (!strcmp(splitedinput[0],"listar") || !strcmp(splitedinput[0],"-l")) {
+    else if (!strcmp(splitedinput[0],"listar")) {
         char c[MAX];
         int j=0;
         for (i=0;i<MAX;i++) {
-            if (pid[i][0]) {
+            if (pid[i][0]>0) {
                 if (i==0) write(output,"######TASKS######\n",18);
                 c[0]='\0';
                 sprintf(c,"Tarefa %d em execução!\n",pid[i][1]);
@@ -452,7 +454,7 @@ void doStuff(char * linha) {
         }
         if (!j) write(output,"Nada a apresentar\n",18);
     }
-    else if (!strcmp(splitedinput[0],"terminar") || !strcmp(splitedinput[0],"-t")) {
+    else if (!strcmp(splitedinput[0],"terminar")) {
         if (tam>1) {
             int p=getPIDOfTask(atoi(splitedinput[1]));
             if (p>0) {
@@ -463,7 +465,7 @@ void doStuff(char * linha) {
         }
         else r=1;
     }
-    else if (!strcmp(splitedinput[0],"historico") || !strcmp(splitedinput[0],"-r")) {
+    else if (!strcmp(splitedinput[0],"historico")) {
         char c[MAX];
         int i=0;
         int n;
@@ -475,10 +477,10 @@ void doStuff(char * linha) {
         }
         if (!i) write(output,"Nada a apresentar\n",18);
     }
-    else if (!strcmp(splitedinput[0],"ajuda") || !strcmp(splitedinput[0],"-h")) {
+    else if (!strcmp(splitedinput[0],"ajuda")) {
         write(output,"Executar task: -e ou executar 'comando1 | comando2 | ...'\nMudar tempo inatividade: -i ou tempo-inatividade n(segundos)\nMudar tempo execução: -m ou tempo-execucao n(segundos)\nListar tarefas: -l ou listar\nTerminar tarefa: -t ou terminar n(numero da tarefa)\nVer histórico: -r ou historico\nVer o output de uma tarefa: -o ou output n(numero da tarefa)\nGuardar backup da info atual: -b ou backup\nApagar data atualmente carregada: -c ou clean\nCarregar a data de um dos backups: -f ou fill 'nome do backup'\nSair: quit\n",513);
     }
-    else if (!strcmp(splitedinput[0],"output") || !strcmp(splitedinput[0],"-o")) {
+    else if (!strcmp(splitedinput[0],"output")) {
         char chari;
         char linha[MAX];
         char *character;
@@ -521,7 +523,7 @@ void doStuff(char * linha) {
         }
         else r=1;
     }
-    else if (!strcmp(splitedinput[0],"-b") || !strcmp(splitedinput[0],"backup")) {
+    else if (!strcmp(splitedinput[0],"backup")) {
         int p[2],i,fF,fT,n;
         char nome[MAX],spinner[MAX],linha[MAX];
         signal(SIGCHLD,SIG_IGN);
@@ -577,7 +579,7 @@ void doStuff(char * linha) {
         }
         write(output,"Backup saved\n",13);
     }
-    else if (!strcmp(splitedinput[0],"-c") || !strcmp(splitedinput[0],"clean")) {
+    else if (!strcmp(splitedinput[0],"clean")) {
         indextoSave=open("files/index",O_RDWR | O_TRUNC | O_APPEND);
         history=open("files/history",O_RDWR | O_TRUNC | O_APPEND);
         logtoSave=open("files/log",O_RDWR | O_TRUNC | O_APPEND);
@@ -588,6 +590,7 @@ void doStuff(char * linha) {
             if (pid[i][0]!=0) {
                 kill(pid[i][0],SIGUSR1);
             }
+            comand[i][0]='\0';
         }
         write(output,"All clean now\n",14);
     }

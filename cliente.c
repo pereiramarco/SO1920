@@ -33,7 +33,39 @@ void main(int argc, char* argv[]) {
     else {
         char s[MAX];
         s[0]='\0';
-        strcat(s,argv[1]);
+        if (!strcmp(argv[1],"-e")) {
+            strcat(s,"executar");
+        }
+        else if (!strcmp(argv[1],"-i")) {
+            strcat(s,"tempo-inactividade");
+        }
+        else if (!strcmp(argv[1],"-m")) {
+            strcat(s,"tempo-execucao");
+        }
+        else if (!strcmp(argv[1],"-l")) {
+            strcat(s,"listar");
+        }
+        else if (!strcmp(argv[1],"-t")) {
+            strcat(s,"terminar");
+        }
+        else if (!strcmp(argv[1],"-r")) {
+            strcat(s,"historico");
+        }
+        else if (!strcmp(argv[1],"-h")) {
+            strcat(s,"ajuda");
+        }
+        else if (!strcmp(argv[1],"-o")) {
+            strcat(s,"output");
+        }
+        else if (!strcmp(argv[1],"-c")) {
+            strcat(s,"clean");
+        }
+        else if (!strcmp(argv[1],"-b")) {
+            strcat(s,"backup");
+        }
+        else if (!strcmp(argv[1],"-f")) {
+            strcat(s,"fill");
+        }
         if (argc==3) {
             strcat(s," ");
             if (!strcmp(argv[1],"-e") || !strcmp(argv[1],"-b")) strcat(s,"'");
