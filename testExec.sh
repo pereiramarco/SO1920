@@ -54,10 +54,11 @@ echo -e "\n"
 ./argus -b #creates backup
 echo -e "\n"
 ./argus -t 2 #ends task 2 that was writing every 4 seconds since the beginning
-echo -2 "\n"
+echo -e "\n"
 ./argus -l #não devem aparecer tarefas
 echo -e "\n"
-./argus -e 'cat file' #ficheiro que contem um script de um filme
+./argus -e 'cat file | wc' #ficheiro que contem um script de um filme
 echo -e "\n"
-./argus -o 9 #should show the script
+sleep 1
+./argus -o 9 #should show wc aplied to the script
 make clean #cleans all created files
