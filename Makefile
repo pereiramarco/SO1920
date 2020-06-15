@@ -4,8 +4,8 @@
 
 
 all: argusd argus
-	mkfifo userin
-	mkfifo userout
+	mkfifo userin || true
+	mkfifo userout || true
 
 servidor: argusd
 	./argusd
@@ -20,4 +20,6 @@ argus: argus.c argus.h
 	gcc -o argus argus.c
 
 clean:
+	pkill argusd || true
+	pkill argus || true
 	rm -rf *.o userin userout files/ backup/ argus argusd p1 p2 aqui ali

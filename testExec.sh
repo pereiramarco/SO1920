@@ -1,8 +1,10 @@
 #!/bin/bash
-make argus
-gcc -o p1 p1.c
-gcc -o p2 p2.c
-sleep 0.5
+make clean
+make all
+./argusd & #initializes server running in the background
+gcc -o p1 p1.c #compiles program that prints every 2 seconds
+gcc -o p2 p2.c #compiles program that prints every 4 seconds
+sleep 1
 ./argus -c #cleaning all data for fresh start
 echo -e "\n"
 ./argus -r #shows history (should be empty)
@@ -61,4 +63,5 @@ echo -e "\n"
 echo -e "\n"
 sleep 1
 ./argus -o 9 #should show wc aplied to the script
+pkill argusd #kills server
 make clean #cleans all created files
