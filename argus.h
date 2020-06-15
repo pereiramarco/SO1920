@@ -7,24 +7,8 @@
 #include <sys/wait.h>
 #include <signal.h>
 
-void saveData();
-
-void reloadData();
-
-int getPIDOfTask(int task);
-
-int getIndexOfPID(int pidd);
-
-void addProcess(int p,int pai);
-
-void saveToLogs(int * p,int t,int died);
-
-void chld_died_handler();
-
-void terminate(int s);
-
-int addToPIDList(int pidd);
-
-void sendsig();
-
-void doStuff(char * linha);
+#define MAX 256
+#define SEND 2048
+#define split " "
+#define userin "userin"
+#define userout "userout"

@@ -1,8 +1,9 @@
 #include "argus.h"
 
-#define MAX 256
-#define SEND 512
-#define split " "
+#define log "files/log"
+#define index "files/log.idx"
+#define data "files/data"
+#define hist "files/historico"
 
 //pid[MAX][MAX] matriz que contem no indice 0 o pid do pai, no indice 1 o numero da tarefa no 2 o pid do numero de filhos no 3 numero de comandos nessa tarefa e nos restantes o pid dos filhos que se encontram a executar
 int tempo_inatividade,tempo_execucao,pid[MAX][MAX],ntarefa,indextoSave,logtoSave,history,fifo,general,output;
@@ -13,7 +14,7 @@ char comand[MAX][MAX];
  */
 void saveData() {
     char s[MAX];
-    general=open("files/data",O_WRONLY | O_CREAT | O_TRUNC,0666);
+    general=open(data,O_WRONLY | O_CREAT | O_TRUNC,0666);
     sprintf(s,"%d %d %d\n",tempo_execucao,tempo_inatividade,ntarefa);
     write(general,s,strlen(s));
     close(general);
@@ -24,7 +25,7 @@ void saveData() {
  */
 void reloadData() {
     char s[MAX],*numero;
-    general=open("files/data",O_RDONLY,0666);
+    general=open(data,O_RDONLY,0666);
     if (general==-1) return;
     read(general,s,MAX);
     numero=strtok(s,split);
@@ -556,19 +557,19 @@ void doStuff(char * linha) {
             switch (i)
             {
             case 0:
-                fF=open("files/data",O_RDONLY);
+                fF=open(data,O_RDONLY);
                 strcat(spinner,"/data");
                 break;
             case 1:
-                fF=open("files/history",O_RDONLY);
+                fF=open(hist,O_RDONLY);
                 strcat(spinner,"/history");
                 break;
             case 2:
-                fF=open("files/log.idx",O_RDONLY);
+                fF=open(index,O_RDONLY);
                 strcat(spinner,"/log.idx");
                 break;
             default:
-                fF=open("files/log",O_RDONLY);
+                fF=open(log,O_RDONLY);
                 strcat(spinner,"/log");
                 break;
             }
@@ -582,9 +583,9 @@ void doStuff(char * linha) {
         write(output,"Backup saved\n",13);
     }
     else if (!strcmp(splitedinput[0],"clean")) {
-        indextoSave=open("files/log.idx",O_RDWR | O_TRUNC | O_APPEND);
-        history=open("files/history",O_RDWR | O_TRUNC | O_APPEND);
-        logtoSave=open("files/log",O_RDWR | O_TRUNC | O_APPEND);
+        indextoSave=open(index,O_RDWR | O_TRUNC | O_APPEND);
+        history=open(hist,O_RDWR | O_TRUNC | O_APPEND);
+        logtoSave=open(log,O_RDWR | O_TRUNC | O_APPEND);
         tempo_inatividade=-1;
         tempo_execucao=-1;
         ntarefa=1;
@@ -617,22 +618,22 @@ void doStuff(char * linha) {
                     case 0:
                         strcat(spinner,"/data");
                         in=open(spinner,O_RDONLY);
-                        out=open("files/data",O_WRONLY | O_CREAT | O_TRUNC,0666);
+                        out=open(data,O_WRONLY | O_CREAT | O_TRUNC,0666);
                     break;
                     case 1:
                         strcat(spinner,"/history");
                         in=open(spinner,O_RDONLY);
-                        out=open("files/history",O_WRONLY | O_CREAT | O_TRUNC,0666);
+                        out=open(hist,O_WRONLY | O_CREAT | O_TRUNC,0666);
                     break;
                     case 2:
                         strcat(spinner,"/log.idx");
                         in=open(spinner,O_RDONLY);
-                        out=open("files/log.idx",O_WRONLY | O_CREAT | O_TRUNC,0666);
+                        out=open(index,O_WRONLY | O_CREAT | O_TRUNC,0666);
                     break;
                     case 3:
                         strcat(spinner,"/log");
                         in=open(spinner,O_RDONLY);
-                        out=open("files/log",O_WRONLY | O_CREAT | O_TRUNC,0666);
+                        out=open(log,O_WRONLY | O_CREAT | O_TRUNC,0666);
                     break;
                 }
                 if (in==-1)  {
@@ -680,9 +681,9 @@ void initServer() {
         }
         wait(NULL);
     }
-    indextoSave = open("files/log.idx",O_RDWR | O_APPEND | O_CREAT, 0666);
-    logtoSave = open("files/log",O_RDWR | O_APPEND | O_CREAT, 0666);
-    history=open("files/history",O_RDWR | O_APPEND | O_CREAT,0666);
+    indextoSave = open(index,O_RDWR | O_APPEND | O_CREAT, 0666);
+    logtoSave = open(log,O_RDWR | O_APPEND | O_CREAT, 0666);
+    history=open(hist,O_RDWR | O_APPEND | O_CREAT,0666);
     reloadData();
     signal(SIGCHLD,chld_died_handler);
 }
@@ -691,9 +692,9 @@ void main() {
     char linha[256];
     initServer();
     while (1) {
-        fifo = open("userin",O_RDONLY,0666);
+        fifo = open(userin,O_RDONLY,0666);
         while (read(fifo,linha,MAX)) {
-            output = open("userout",O_WRONLY,0666);
+            output = open(userout,O_WRONLY,0666);
             doStuff(linha);
             saveData();
             close(output);
